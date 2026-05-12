@@ -1,0 +1,65 @@
+# Unit Economics & Metrics Summary
+
+## Overview
+
+Було розраховано funnel та monetization metrics у розрізі acquisition channels: `tiktok`, `meta`, `google`.
+
+Аналіз показує, що канали суттєво відрізняються не лише за обсягом користувачів, але й за якістю воронки та очікуваним LTV proxy.
+
+## Key Results
+
+| Channel | Installs | Purchasers | Install → Paywall | Paywall → Purchase | Install → Purchase | Rebills per Payer | Upsell CR | LTV 6m Proxy |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| tiktok | 3,171 | 282 | 12.02% | 74.02% | 8.89% | 0.82 | 18.09% | $69.73 |
+| meta | 17,143 | 531 | 4.36% | 70.99% | 3.10% | 0.97 | 19.96% | $77.28 |
+| google | 1,110 | 194 | 23.96% | 72.93% | 17.48% | 1.26 | 22.16% | $92.55 |
+
+## Main Observations
+
+- `meta` має найбільший масштаб: 17,143 installs і 531 purchasers. Водночас канал має найнижчу end-to-end conversion `Install → Purchase` — лише 3.10%.
+- `google` має найменший обсяг installs, але найкращу якість користувачів: найвищий `Install → Paywall` conversion, найвищий `Install → Purchase` conversion і найвищий `LTV 6m proxy`.
+- `tiktok` знаходиться між `meta` і `google`: має кращу conversion quality, ніж `meta`, але нижчий LTV proxy, ніж обидва інші канали.
+- `Paywall → Purchase` conversion є відносно стабільною між каналами: приблизно 71-74%. Це означає, що основна різниця між каналами формується до paywall step, а не на етапі покупки після paywall.
+- `google` має найвищі `rebills_per_payer_6m` — 1.26, що є головним драйвером найвищого LTV proxy.
+- AOV по типах платежів однаковий для всіх каналів: `first_aov = $24.99`, `rebill_aov = $49.99`, `upsell_aov = $20.00`. Тому різниця в LTV між каналами пояснюється не ціною, а поведінкою користувачів після покупки.
+
+## Channel Interpretation
+
+### Google
+
+`google` виглядає як канал з найвищою якістю користувачів:
+
+- найвищий `Install → Paywall`: 23.96%;
+- найвищий `Install → Purchase`: 17.48%;
+- найвищий `rebills_per_payer_6m`: 1.26;
+- найвищий `LTV 6m proxy`: $92.55.
+
+Попри найменший масштаб, цей канал має найкращу monetization quality. Якщо CAC у Google не буде суттєво вищим за інші канали, цей канал може бути найперспективнішим для масштабування.
+
+### Meta
+
+`meta` дає найбільший обсяг користувачів, але має найслабшу funnel efficiency:
+
+- найбільше installs: 17,143;
+- найнижчий `Install → Paywall`: 4.36%;
+- найнижчий `Install → Purchase`: 3.10%.
+
+Водночас `meta` має непоганий `LTV 6m proxy` — $77.28, вищий за TikTok. Це означає, що користувачі, які все ж доходять до покупки, можуть мати нормальну monetization quality. Основна проблема каналу — велика втрата користувачів до paywall.
+
+### TikTok
+
+`tiktok` має середній рівень funnel performance:
+
+- `Install → Paywall`: 12.02%;
+- `Install → Purchase`: 8.89%;
+- `LTV 6m proxy`: $69.73.
+
+Канал має кращу воронку, ніж Meta, але нижчий LTV proxy. Це може означати, що TikTok приводить більше користувачів, які доходять до покупки, ніж Meta у відносному вимірі, але вони слабше монетизуються після першої покупки.
+
+## Business Takeaways
+
+- Основна різниця між каналами формується на етапі `Install → Paywall`, а не на етапі `Paywall → Purchase`.
+- `google` має найкращу якість користувачів за funnel і monetization metrics, але потребує перевірки CAC перед рішенням про масштабування.
+- `meta` має найбільший масштаб, але слабку ранню funnel conversion. Для цього каналу варто дослідити якість трафіку, onboarding або відповідність рекламного promise продуктовому experience.
+- `tiktok` виглядає як помірно ефективний канал, але його нижчий LTV proxy може обмежувати прибутковість при високому CAC.
+- Для фінального висновку по unit economics потрібно поєднати ці результати з CAC by channel.
