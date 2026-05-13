@@ -233,3 +233,19 @@ WHERE amount IS NOT NULL
 GROUP BY event
 ORDER BY total_revenue DESC;
 
+-- Data Understanding: raw overview по marketing_ads_raw
+
+SELECT
+  'marketing_ads_raw' AS table_name,
+  COUNT(*) AS rows_total,
+  COUNT(DISTINCT source) AS unique_sources,
+  COUNT(DISTINCT campaign_id) AS unique_campaigns,
+  COUNT(DISTINCT adset_id) AS unique_adsets,
+  COUNT(DISTINCT ad_id) AS unique_ads,
+  MIN(`date`) AS earliest_date,
+  MAX(`date`) AS latest_date,
+  DATEDIFF(MAX(`date`), MIN(`date`)) + 1 AS days_covered,
+  MIN(CAST(`timestamp` AS DATETIME)) AS earliest_timestamp,
+  MAX(CAST(`timestamp` AS DATETIME)) AS latest_timestamp
+FROM marketing_ads_raw;
+
