@@ -121,11 +121,66 @@
 - Оскільки `channel` доступний у `product_events`, подальший channel-level аналіз можливий для продуктової воронки.
 - Для повного CAC-аналізу потрібні окремі marketing spend дані. У цьому проекті CAC-аналіз буде виконуватись окремо на основі marketing ads dataset.
 
+## Marketing Ads Data
+
+Окрім продуктових та revenue-даних, для розрахунку CAC використовується окремий CSV-файл:
+
+- `marketing_ads_raw.csv` — сирі дані з рекламних кабінетів TikTok, META і Google.
+
+Ця таблиця не містить `user_id`, тому її не можна напряму поєднати з `product_events` або `orders` на рівні користувача. Вона використовується окремо для channel-level аналізу marketing spend, рекламної воронки та CAC.
+
+## Marketing Ads Dataset Overview
+
+| Table / File | Rows Total | Unique Sources | Unique Campaigns | Unique Adsets | Unique Ads | Earliest Date | Latest Date | Days Covered | Earliest Timestamp | Latest Timestamp |
+|---|---:|---:|---:|---:|---:|---|---|---:|---|---|
+| marketing_ads_raw.csv | 8,814 | 3 | 6 | 10 | 10 | 2024-01-02 | 2024-07-14 | 195 | 2024-01-02 01:19:00 | 2024-07-14 14:51:34 |
+
+### Table Grain
+
+Потенційний grain таблиці:
+
+`1 row = one cumulative advertising snapshot for one ad_id on one date at one load timestamp`
+
+Практично це означає, що для одного `ad_id + date` може бути кілька рядків протягом дня. Тому перед агрегацією потрібно залишити останній snapshot за `timestamp`.
+
+
+Ключові поля:
+
+| Field | Meaning |
+|---|---|
+| `source` | Рекламний канал: TikTok, META або Google |
+| `campaign_id` | ID кампанії |
+| `adset_id` | ID групи оголошень |
+| `ad_id` | ID конкретного оголошення |
+| `date` | Дата рекламної статистики |
+| `spend` | Кумулятивні витрати на момент snapshot |
+| `impressions` | Кумулятивні покази на момент snapshot |
+| `clicks` | Кумулятивні кліки на момент snapshot |
+| `installs` | Кумулятивні встановлення на момент snapshot |
+| `registrations` | Кумулятивні реєстрації на момент snapshot |
+| `timestamp` | Час завантаження snapshot у систему |
+
+### Observations
+
+- `marketing_ads_raw.csv` є окремим CSV-файлом із рекламними даними, а не user-level таблицею.
+- Таблиця містить 8,814 рядків за період з 2024-01-02 до 2024-07-14.
+- У даних є 3 рекламні канали, 6 кампаній, 10 adsets і 10 унікальних ads.
+- Дані мають cumulative snapshot structure: протягом одного дня для одного `ad_id` може бути кілька snapshot-ів.
+- Через cumulative structure не можна просто робити `SUM(spend)` по raw-таблиці — це завищить результат.
+- Перед розрахунком CAC потрібно залишити останній snapshot для кожного `ad_id + date`.
+- Після дедублікації дані можна агрегувати до рівня `source + date`, а потім до рівня `source` за весь період.
+- CAC у цьому проекті рахується на channel-level як `total_spend / registrations`.
+
 ## Key Takeaways
 
-- Основні таблиці для аналізу — `product_events` та `orders`.
+- Основні таблиці для LTV-аналізу — `product_events` та `orders`.
 - `product_events` найкраще інтерпретувати як milestone funnel table, а не як raw behavioral event stream.
 - `orders` містить кілька типів monetization events: `purchase`, `rebill`, `upsell`.
 - Повторні платежі (`rebill`) формують найбільшу частину revenue.
-- Дані по продуктах і revenue мають різне date coverage, тому при розрахунку unit economics потрібно чітко зафіксувати revenue window.
-- Channel-level аналіз можливий через `product_events`, але CAC потребує окремих spend data.
+- Для CAC використовується окремий CSV-файл `marketing_ads_raw.csv`.
+- `marketing_ads_raw.csv` не містить `user_id`, тому аналіз CAC виконується на рівні каналів, а не окремих користувачів.
+- Marketing ads дані є cumulative snapshot-level, тому перед розрахунком spend і CAC потрібна дедублікація.
+- Для коректного LTV/CAC LTV і CAC мають мати однакову базу розрахунку: наприклад, обидва на `install` або обидва на `registration`. Оскільки `marketing_ads_raw.csv` не містить `user_id`, порівняння виконується на рівні каналу через зіставлення `channel` і `source`.
+
+
+
