@@ -127,15 +127,156 @@
 
 Це важливо для подальшого аналізу, оскільки дозволяє пов’язувати продуктові події та revenue через `user_id`.
 
-## Key Takeaways
+## Marketing Ads Data Quality
+
+Окрім `product_events` та `orders`, для розрахунку CAC була перевірена окрема таблиця / CSV-файл:
+
+- `marketing_ads_raw.csv` — сирі рекламні дані з TikTok, META та Google.
+
+Ці дані використовуються для розрахунку marketing spend, рекламної воронки та CAC на рівні каналів.
+
+## Additional Checks Performed for Marketing Ads
+
+Для `marketing_ads_raw.csv` були виконані такі перевірки:
+
+- null values у ключових полях;
+- дублікати за raw natural key;
+- валідність `timestamp` для вибору останнього snapshot;
+- валідність marketing metrics (`spend`, `impressions`, `clicks`, `installs`, `registrations`);
+- базова funnel consistency для рекламної воронки;
+- snapshot structure для підтвердження cumulative nature даних.
+
+## Marketing Ads Null Checks
+
+| Table / File | Rows Total | Null Source | Null Campaign ID | Null Adset ID | Null Ad ID | Null Date | Null Spend | Null Impressions | Null Clicks | Null Installs | Null Registrations | Null Timestamp |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| marketing_ads_raw.csv | 8,814 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+### Result
+
+Ключові поля в `marketing_ads_raw.csv` заповнені повністю:
+
+- немає null values у полях для ідентифікації рекламної структури: `source`, `campaign_id`, `adset_id`, `ad_id`;
+- немає null values у полях для дедублікації snapshot-ів: `date`, `timestamp`;
+- немає null values у метриках для розрахунку CAC і рекламної воронки: `spend`, `impressions`, `clicks`, `installs`, `registrations`.
+
+
+## Marketing Ads Duplicate Checks
+
+Дублікати перевірялись за raw natural key:
+
+`source + campaign_id + adset_id + ad_id + date + spend + impressions + clicks + installs + registrations + timestamp`
+
+|rows_total|unique_raw_keys|duplicate_rows|
+|----------|---------------|--------------|
+|8814|8814|0|
+
+
+### Result
+
+Ця перевірка показує, чи є повністю повторені snapshot-и.  
+Важливо: кілька рядків на один `ad_id + date` не є помилкою, якщо вони мають різний `timestamp`. Це очікувана cumulative snapshot structure.
+
+## Timestamp Validity
+
+|rows_total|invalid_timestamp_rows|earliest_timestamp|latest_timestamp|
+|----------|----------------------|------------------|----------------|
+|8814|0|2024-01-02 01:19:00|2024-07-14 14:51:34|
+
+
+### Result
+
+Поле `timestamp` зберігається як текстове значення, але для розрахунків його потрібно приводити до `DATETIME`.
+
+Це потрібно не для очищення raw-даних, а для коректного сортування snapshot-ів:
+
+`ROW_NUMBER() OVER (PARTITION BY ad_id, date ORDER BY CAST(timestamp AS DATETIME) DESC)`
+
+## Marketing Metrics Validity
+
+|rows_total|negative_spend|negative_impressions|negative_clicks|negative_installs|negative_registrations|min_spend|max_spend|avg_spend|
+|----------|--------------|--------------------|---------------|-----------------|----------------------|---------|---------|---------|
+|8814|0|0|0|0|0|3.63|12500.00|4055.71|
+
+
+### Result
+
+Для рекламних метрик не очікуються відʼємні значення.  
+Якщо `spend`, `impressions`, `clicks`, `installs` або `registrations` мають negative values, такі рядки потрібно окремо перевірити перед CAC-розрахунком.
+
+## Ads Funnel Consistency
+
+|rows_total|clicks_gt_impressions|installs_gt_clicks|registrations_gt_installs|
+|----------|---------------------|------------------|-------------------------|
+|8814|0|0|0|
+
+
+### Result
+
+Базова рекламна воронка має вигляд:
+
+`impressions → clicks → installs → registrations`
+
+Тому на рівні snapshot очікується:
+
+- `clicks <= impressions`;
+- `installs <= clicks`;
+- `registrations <= installs`.
+
+Порушення цієї логіки можуть означати проблему в сирих рекламних даних або різні правила attribution між платформами.
+
+## Snapshot Structure
+
+|snapshots_per_ad_day|ad_day_groups|
+|--------------------|-------------|
+|3|474|
+|4|497|
+|5|470|
+|6|509|
+
+
+### Result
+
+`marketing_ads_raw.csv` має cumulative snapshot structure.
+
+Це означає, що для одного `ad_id + date` може бути кілька snapshot-ів протягом дня. 
+Тому перед розрахунком daily spend і CAC потрібно залишити тільки останній snapshot за день:
+
+`ad_id + date + latest timestamp`
+
+## Deduplication Logic Check
+
+Після застосування логіки:
+
+`PARTITION BY ad_id, date ORDER BY CAST(timestamp AS DATETIME) DESC`
+
+та фільтрації:
+
+`rn = 1`
+
+очікується, що залишиться рівно один рядок на кожен `ad_id + date`.
+
+| Check | Expected Result |
+|---|---:|
+| Rows with more than 1 record after deduplication by `ad_id + date` | 0 |
+
+### Result
+
+Ця перевірка підтверджує, що логіка дедублікації працює коректно і може використовуватись перед агрегацією до `source + date`, а потім до `source`.
+
+## Updated Key Takeaways
 
 - У ключових полях `product_events` та `orders` немає null values.
-- Дублікатів за natural keys не знайдено.
-- Revenue values у `orders` валідні: немає null, zero, negative або підозріло великих amount.
+- Дублікатів за natural keys у `product_events` та `orders` не знайдено.
+- Revenue values у `orders` валідні.
 - Кожен revenue event має стабільний price point.
 - Продуктова воронка виглядає консистентною.
 - Усі paying users мають відповідні product events.
-- Є один order після завершення періоду product_events, тому для unit economics потрібно явно визначити revenue window.
+- Для CAC використовується окремий файл `marketing_ads_raw.csv`.
+- `marketing_ads_raw.csv` має cumulative snapshot structure, тому перед розрахунком spend і CAC потрібна дедублікація.
+- Правильна логіка дедублікації: залишити останній snapshot за `timestamp` для кожного `ad_id + date`.
+- Для коректного LTV/CAC LTV і CAC мають мати однакову базу розрахунку: наприклад, обидва на `install` або обидва на `registration`.
+
 
 ## Decision for Further Analysis
 
