@@ -1,6 +1,17 @@
--- BigQuery Standard SQL
--- Декомпозиція LTV по каналах.
--- LTV рахуємо на registered user, бо CAC у наступній частині рахується як spend / registrations.
+-- ============================================================
+-- LTV Analysis by Channel
+-- Dataset: product_events, orders
+-- Environment: BigQuery Standard SQL
+-- ============================================================
+--
+-- Business goal:
+-- Calculate 6-month LTV by channel using monetization decomposition.
+--
+-- LTV logic:
+-- LTV is calculated per registered user because CAC is calculated as
+-- spend / registrations in the marketing analysis.
+-- ============================================================
+
 
 WITH registrations AS (
   SELECT
