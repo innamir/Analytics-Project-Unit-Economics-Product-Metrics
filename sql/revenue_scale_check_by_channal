@@ -1,0 +1,99 @@
+-- BigQuery Standard SQL
+-- Revenue, ARPPU та ARPU по каналах.
+-- База = registered users, щоб узгодити результат із CAC = spend / registrations.
+
+WITH registrations AS (
+  SELECT
+    user_id,
+    channel,
+    MIN(timestamp) AS registration_ts
+  FROM `cool-furnace-495912-n0.workshop_sql.product_events`
+  WHERE event_type = 'registration'
+  GROUP BY
+    user_id,
+    channel
+),
+
+orders_in_6m AS (
+  SELECT
+    r.user_id,
+    r.channel,
+    o.event,
+    o.amount,
+    o.timestamp AS order_ts
+  FROM registrations r
+  -- LEFT JOIN залишає всіх registered users у базі,
+  -- навіть якщо вони не мали оплат.
+  LEFT JOIN `cool-furnace-495912-n0.workshop_sql.orders` o
+    ON r.user_id = o.user_id
+    -- 6m revenue window від registration.
+    AND o.timestamp >= r.registration_ts
+    AND o.timestamp < TIMESTAMP(DATETIME_ADD(DATETIME(r.registration_ts), INTERVAL 6 MONTH))
+),
+
+user_revenue AS (
+  SELECT
+    user_id,
+    channel,
+
+    -- Revenue на рівні користувача.
+    SUM(COALESCE(amount, 0)) AS total_revenue_6m,
+
+    -- Розбивка revenue за типами оплат.
+    SUM(CASE WHEN event = 'purchase' THEN amount ELSE 0 END) AS purchase_revenue_6m,
+    SUM(CASE WHEN event = 'rebill' THEN amount ELSE 0 END) AS rebill_revenue_6m,
+    SUM(CASE WHEN event = 'upsell' THEN amount ELSE 0 END) AS upsell_revenue_6m,
+
+    -- Кількість подій за типами оплат.
+    COUNTIF(event = 'purchase') AS purchase_events,
+    COUNTIF(event = 'rebill') AS rebill_events,
+    COUNTIF(event = 'upsell') AS upsell_events
+  FROM orders_in_6m
+  GROUP BY
+    user_id,
+    channel
+)
+
+SELECT
+  channel,
+
+  -- База для CAC-compatible ARPU.
+  COUNT(DISTINCT user_id) AS registered_users,
+
+  -- Paying users = users з revenue > 0.
+  COUNT(DISTINCT IF(total_revenue_6m > 0, user_id, NULL)) AS paying_users,
+
+  -- Total revenue за 6m window.
+  ROUND(SUM(total_revenue_6m), 2) AS total_revenue_6m,
+
+  -- Revenue breakdown.
+  ROUND(SUM(purchase_revenue_6m), 2) AS purchase_revenue_6m,
+  ROUND(SUM(rebill_revenue_6m), 2) AS rebill_revenue_6m,
+  ROUND(SUM(upsell_revenue_6m), 2) AS upsell_revenue_6m,
+
+  -- ARPPU 6m = revenue / paying users.
+  -- Це те саме бізнес-поняття, що LTV 6m per payer у цьому dataset.
+  ROUND(
+    SUM(total_revenue_6m)
+    / NULLIF(COUNT(DISTINCT IF(total_revenue_6m > 0, user_id, NULL)), 0),
+    2
+  ) AS arppu_6m_per_payer,
+
+  -- ARPU 6m = revenue / registered users.
+  -- Саме цю метрику порівнюємо з CAC per registration.
+  ROUND(
+    SUM(total_revenue_6m)
+    / NULLIF(COUNT(DISTINCT user_id), 0),
+    2
+  ) AS arpu_6m_per_registered_user,
+
+  -- Частка revenue каналу від усього revenue.
+  ROUND(
+    SUM(total_revenue_6m)
+    / NULLIF(SUM(SUM(total_revenue_6m)) OVER (), 0),
+    4
+  ) AS revenue_share
+
+FROM user_revenue
+GROUP BY channel
+ORDER BY total_revenue_6m DESC;
