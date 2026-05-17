@@ -1,15 +1,19 @@
 -- ============================================================
--- LTV Analysis by Channel
--- Dataset: product_events, orders
--- Environment: BigQuery Standard SQL
+-- LTV-аналіз по каналах
+-- Датасети: product_events, orders
+-- Середовище: BigQuery Standard SQL
 -- ============================================================
 --
--- Business goal:
--- Calculate 6-month LTV by channel using monetization decomposition.
+-- Бізнес-ціль:
+-- Порахувати 6-month LTV по каналах через декомпозицію monetization metrics.
 --
--- LTV logic:
--- LTV is calculated per registered user because CAC is calculated as
--- spend / registrations in the marketing analysis.
+-- Логіка LTV:
+-- LTV рахується на registered user, тому що CAC у marketing analysis
+-- рахується як spend / registrations.
+--
+-- Revenue scale:
+-- Окрім компонентів LTV, запит також рахує total revenue
+-- та revenue share по каналах, щоб порівняти efficiency vs business scale.
 -- ============================================================
 
 
@@ -58,7 +62,10 @@ user_monetization AS (
 
     -- Upsell users потрібні для CR Sub -> Upsell.
     COUNTIF(event = 'upsell') AS upsell_count,
-    SUM(CASE WHEN event = 'upsell' THEN amount ELSE 0 END) AS upsell_revenue
+    SUM(CASE WHEN event = 'upsell' THEN amount ELSE 0 END) AS upsell_revenue,
+
+    -- Total revenue користувача за 6 місяців.
+    SUM(COALESCE(amount, 0)) AS total_revenue
   FROM orders_in_6m
   GROUP BY
     user_id,
@@ -87,7 +94,10 @@ channel_components AS (
     -- Upsell metrics для CR Sub -> Upsell та upsell AOV.
     COUNT(DISTINCT IF(upsell_count > 0, user_id, NULL)) AS upsell_users,
     SUM(upsell_count) AS upsell_events,
-    SUM(upsell_revenue) AS upsell_revenue
+    SUM(upsell_revenue) AS upsell_revenue,
+
+    -- Revenue scale metrics.
+    SUM(total_revenue) AS total_revenue
   FROM user_monetization
   GROUP BY channel
 )
@@ -97,6 +107,15 @@ SELECT
 
   registered_users,
   buyers,
+
+  -- Total revenue за 6 місяців по каналу.
+  ROUND(total_revenue, 2) AS total_revenue_6m,
+
+  -- Revenue share = частка каналу в загальному revenue.
+  ROUND(
+    SAFE_DIVIDE(total_revenue, SUM(total_revenue) OVER ()),
+    4
+  ) AS revenue_share,
 
   -- Registration -> Purchase conversion.
   ROUND(SAFE_DIVIDE(buyers, registered_users), 4) AS cr_registration_to_purchase,
@@ -162,8 +181,6 @@ SELECT
     ),
     2
   ) AS ltv_6m_per_registered_user
-
-  
 
 FROM channel_components
 ORDER BY ltv_6m_per_registered_user DESC;
