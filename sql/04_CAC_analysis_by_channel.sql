@@ -1,24 +1,25 @@
 -- ============================================================
--- CAC Analysis by Channel
--- Dataset: marketing_ads_raw.csv
--- Environment: DBeaver / MySQL 8+
+-- CAC-аналіз по каналах
+-- Датасет: marketing_ads_raw.csv
+-- Середовище: DBeaver / MySQL 8+
 -- ============================================================
 --
--- Business goal:
--- Calculate CAC and marketing funnel metrics by source.
+-- Бізнес-ціль:
+-- Порахувати CAC та marketing funnel metrics по source.
 --
--- CAC logic:
--- CAC is calculated per registered user:
+-- Логіка CAC:
+-- CAC рахується на registered user:
 -- CAC = total_spend / registrations
 --
--- Data note:
--- During cross-dataset consistency checks, marketing metrics were found
--- to be stored at approximately x100 scale. Therefore absolute metrics
--- are normalized by dividing by 100 after deduplication.
+-- Примітка щодо даних:
+-- Під час cross-dataset consistency checks було виявлено, що marketing metrics
+-- збережені приблизно у масштабі x100. Тому absolute metrics нормалізуються
+-- через ділення на 100 після дедублікації.
 --
--- LTV/CAC logic:
--- LTV values are taken from the previous sql/03_LTV_analysis_by_channel.sql
+-- Логіка LTV/CAC:
+-- LTV-значення беруться з попереднього запиту sql/03_LTV_analysis_by_channel.sql
 -- ============================================================
+
 
 WITH ranked_snapshots AS (
   SELECT
