@@ -5,7 +5,7 @@
 -- ============================================================
 --
 -- Бізнес-ціль:
--- Порахувати CAC та marketing funnel metrics по source.
+-- Порахувати CAC та marketing funnel metrics по channel.
 --
 -- Логіка CAC:
 -- CAC рахується на registered user:
@@ -19,7 +19,6 @@
 -- Логіка LTV/CAC:
 -- LTV-значення беруться з попереднього запиту sql/03_LTV_analysis_by_channel.sql
 -- ============================================================
-
 
 WITH ranked_snapshots AS (
   SELECT
@@ -65,7 +64,6 @@ deduplicated_ads AS (
 
     snapshot_ts
   FROM ranked_snapshots
-
   -- rn = 1 означає останній snapshot за день для конкретного ad_id.
   WHERE rn = 1
 ),
@@ -121,7 +119,7 @@ channel_with_ltv AS (
 )
 
 SELECT
-  source,
+  source AS channel,
 
   ROUND(total_spend, 2) AS total_spend,
 
