@@ -276,9 +276,96 @@
 - `marketing_ads_raw.csv` має cumulative snapshot structure, тому перед розрахунком spend і CAC потрібна дедублікація.
 - Правильна логіка дедублікації: залишити останній snapshot за `timestamp` для кожного `ad_id + date`.
 - Для коректного LTV/CAC LTV і CAC мають мати однакову базу розрахунку: наприклад, обидва на `install` або обидва на `registration`.
+- 
+## Cross-Dataset Consistency Check
 
+Оскільки LTV і CAC рахуються з різних джерел даних, перед фінальним LTV/CAC була виконана додаткова перевірка узгодженості між product/revenue data та marketing ads data.
+
+LTV розраховується на основі:
+
+- `product_events` — registered users та acquisition channel;
+- `orders` — revenue events.
+
+CAC розраховується на основі:
+
+- `marketing_ads_raw.csv` — spend, impressions, clicks, installs, registrations.
+
+## Date Coverage Consistency
+
+Перед порівнянням product/revenue data з marketing ads data було перевірено date coverage.
+
+| Dataset | Earliest Date | Latest Date | Days Covered |
+|---|---|---|---:|
+| product_events | 2024-01-01 | 2024-06-29 | 181 |
+| orders | 2024-01-02 | 2024-07-14 | 195 |
+| marketing_ads_raw.csv | 2024-01-02 | 2024-07-14 | 195 |
+
+`orders` та `marketing_ads_raw.csv` мають однаковий date coverage: з 2024-01-02 до 2024-07-14.
+
+`product_events` починається на один день раніше, але закінчується раніше: 2024-06-29. Це означає, що product-level події, зокрема `registration`, доступні лише до 2024-06-29, тоді як revenue та marketing data доступні до 2024-07-14.
+
+Для перевірки registration consistency між `product_events` та `marketing_ads_raw.csv` потрібно використовувати спільний період:
+
+`2024-01-02 → 2024-06-29`
+
+6-month revenue window не застосовується до цієї перевірки, оскільки вона стосується не revenue, а узгодженості acquisition / registration base між різними джерелами.
+
+## Spend Scale Check
+
+Після дедублікації `marketing_ads_raw.csv` total spend виявився приблизно у 100 разів більшим за очікувані значення з підказки.
+
+Після перевірки було виявлено, що:
+
+- `spend / 100` збігається з очікуваним spend scale;
+- expected spend з очікуваним: приблизно $15K для TikTok, $50K для Meta, $15K для Google.
+
+Тому для фінального аналізу marketing spend інтерпретується як масштабований показник, а absolute spend values нормалізуються через ділення на 100.
+
+## Registration Consistency Check
+
+Також було перевірено, чи узгоджується кількість registrations у marketing ads data з кількістю registered users у product data.
+
+Початково після дедублікації `marketing_ads_raw.csv` кількість registrations була приблизно у 100 разів більшою за кількість `registration` users у `product_events`.
+
+Після нормалізації:
+
+`marketing registrations / 100`
+
+значення стали близькими до кількості registered users у product data.
+
+| Channel | Marketing Registrations / 100 | Product Registered Users | Difference |
+|---|---:|---:|---:|
+| google | 1,076 | 1,066 | +10 |
+| meta | 16,079 | 16,114 | -35 |
+| tiktok | 2,676 | 2,790 | -114 |
+
+Невелика різниця між джерелами може пояснюватися:
+
+- різним date coverage між datasets;
+- timezone differences;
+- attribution logic у рекламних платформах;
+- різною природою метрик: marketing attributed registrations vs product-level registration events.
+
+## Result
+
+Після нормалізації marketing metrics через `/ 100` marketing ads data стає достатньо узгодженою з product data для channel-level LTV/CAC аналізу.
+
+Водночас LTV/CAC все ще слід трактувати як channel-level estimate, а не точний user-level calculation, оскільки між datasets немає прямого user-level attribution join через `user_id`.
 
 ## Decision for Further Analysis
 
-Дані можна використовувати для розрахунку продуктових метрик, revenue та unit economics без очищення або дедублікації.
+Дані `product_events` та `orders` можна використовувати для розрахунку продуктових метрик, revenue та LTV без очищення або дедублікації.
+
+Дані `marketing_ads_raw.csv` можна використовувати для розрахунку CAC після:
+
+- дедублікації cumulative snapshot-ів;
+- нормалізації marketing metrics через `/ 100`;
+- врахування різного date coverage між product та marketing datasets.
+
+Для фінального LTV/CAC аналізу потрібно:
+
+- рахувати LTV і CAC на однаковій базі користувача, наприклад `registration`;
+- використовувати channel-level зіставлення `channel` з product/revenue data та `source` з marketing ads data;
+- трактувати результат як channel-level estimate, а не точний user-level unit economics calculation.
+
 
