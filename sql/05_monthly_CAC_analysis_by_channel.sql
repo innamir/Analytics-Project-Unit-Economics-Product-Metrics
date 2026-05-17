@@ -11,7 +11,7 @@
 -- Логіка:
 -- 1. Залишаємо останній snapshot на кожен ad_id + date.
 -- 2. Нормалізуємо absolute marketing metrics через /100.
--- 3. Агрегуємо дані по source + month.
+-- 3. Агрегуємо дані по channel + month.
 -- 4. Рахуємо CAC та marketing funnel metrics по місяцях.
 -- ============================================================
 
@@ -111,7 +111,7 @@ monthly_cac AS (
 )
 
 SELECT
-  source,
+  source AS channel,
   month,
 
   ROUND(total_spend, 2) AS total_spend,
@@ -155,5 +155,5 @@ SELECT
 
 FROM monthly_cac
 ORDER BY
-  source,
+  channel,
   month;
