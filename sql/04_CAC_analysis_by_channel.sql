@@ -11,10 +11,14 @@
 -- CAC is calculated per registered user:
 -- CAC = total_spend / registrations
 --
+-- Data note:
+-- During cross-dataset consistency checks, marketing metrics were found
+-- to be stored at approximately x100 scale. Therefore absolute metrics
+-- are normalized by dividing by 100 after deduplication.
+--
 -- LTV/CAC logic:
 -- LTV values are taken from the previous sql/03_LTV_analysis_by_channel.sql
 -- ============================================================
-
 
 WITH ranked_snapshots AS (
   SELECT
@@ -49,11 +53,15 @@ deduplicated_ads AS (
     adset_id,
     ad_id,
     `date`,
-    spend,
-    impressions,
-    clicks,
-    installs,
-    registrations,
+
+    -- Нормалізуємо absolute marketing metrics через /100
+    -- згідно з cross-dataset consistency check.
+    spend / 100 AS spend,
+    impressions / 100 AS impressions,
+    clicks / 100 AS clicks,
+    installs / 100 AS installs,
+    registrations / 100 AS registrations,
+
     snapshot_ts
   FROM ranked_snapshots
 
@@ -67,6 +75,7 @@ daily_metrics AS (
     `date`,
 
     -- Після дедублікації можна сумувати cumulative values,
+    -- бо залишився один фінальний snapshot на ad_id + date.
     SUM(spend) AS daily_spend,
     SUM(impressions) AS daily_impressions,
     SUM(clicks) AS daily_clicks,
@@ -105,7 +114,7 @@ channel_with_ltv AS (
     CASE
       WHEN source = 'tiktok' THEN 7.05
       WHEN source = 'meta' THEN 2.55
-      WHEN source = 'google' THEN 16.8
+      WHEN source = 'google' THEN 16.80
     END AS ltv
   FROM channel_metrics
 )
@@ -140,4 +149,3 @@ SELECT
 
 FROM channel_with_ltv
 ORDER BY ltv_cac DESC;
-
