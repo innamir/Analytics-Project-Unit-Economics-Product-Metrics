@@ -1,5 +1,8 @@
 # Analytics Project: Unit Economics & Product Metrics
 
+**GitHub Repository:** https://github.com/innamir/Analytics-Project-Unit-Economics-Product-Metrics
+**Tableau Dashboard:** https://public.tableau.com/app/profile/inna.myroshnichenko3475/viz/dashboard_17790857686770/UnitEconomicsDashboard?publish=yes
+
 ## Business Context
 
 Цей проєкт імітує аналітичну задачу для subscription-based продукту з paid acquisition.
@@ -71,48 +74,52 @@
 Оскільки CAC рахується як:
 CAC = spend / registrations
 LTV/CAC = LTV per registered user / CAC per registered user
-
 ## Analysis
+
 SQL-запити розділені на логічні частини:
 
-LTV та revenue by channel;
-CAC by channel;
-monthly CAC by channel;
-acquisition та monetization funnels.
+- LTV та revenue by channel;
+- CAC by channel;
+- monthly CAC by channel;
+- acquisition та monetization funnels.
 
-### Tableau dashboard візуалізує ключові частини аналізу:
+Tableau dashboard візуалізує ключові частини аналізу:
 
-KPI-картки: revenue за 6 місяців, marketing spend, CAC та LTV/CAC;
-LTV/CAC по каналах із break-even лінією LTV/CAC = 1;
-scatterplot CAC vs LTV на зареєстрованого користувача, де розмір bubble показує revenue scale;
-динаміку CAC по місяцях;
-воронку залучення;
-воронку монетизації.
+- KPI-картки: revenue за 6 місяців, marketing spend, CAC та LTV/CAC;
+- LTV/CAC по каналах із break-even лінією `LTV/CAC = 1`;
+- scatterplot `CAC vs LTV на зареєстрованого користувача`, де розмір bubble показує revenue scale;
+- динаміку CAC по місяцях;
+- воронку залучення;
+- воронку монетизації.
 
 ## Tableau Dashboard
 
 Interactive dashboard is available on Tableau Public:
 
-[Open Tableau Dashboard](https://public.tableau.com/app/profile/inna.myroshnichenko3475/viz/dashboard_17790857686770/UnitEconomicsDashboard?publish=yes)
+https://public.tableau.com/app/profile/inna.myroshnichenko3475/viz/dashboard_17790857686770/UnitEconomicsDashboard?publish=yes
 
+## Key Findings
 
-# Key Findings
-*tiktok* має найкращий LTV/CAC — 1.31. Це означає, що канал генерує приблизно $1.31 LTV на кожен $1 acquisition cost.
-*google* має найвищий LTV per registered user — $16.80, але також найвищий CAC — $14.12.
-*meta* має найнижчий CAC — $3.10 — і найбільший revenue scale: $41,034.56 або 52.20% усього revenue.
-Водночас *meta* має LTV/CAC = 0.82, тобто канал нижче break-even.
-Найнижчий CAC не гарантує найкращу unit economics.
-Найвищий LTV також не гарантує найкращу unit economics.
-Monthly CAC був відносно стабільним протягом кампанії, тому різниця між каналами виглядає системною.
-# Recommendations
-*tiktok* варто розглядати як основного кандидата для контрольованого масштабування, оскільки він має найкращий баланс між CAC та LTV.
-*google* варто оптимізувати за CAC, не втрачаючи якість користувачів.
-*meta* не варто вимикати одразу, оскільки він генерує найбільший revenue scale. Але канал потребує покращення traffic quality або conversion у purchase.
-Для наступного етапу варто аналізувати marketing_ads_raw.csv на рівні campaign_id, adset_id та ad_id, щоб знайти сегменти з кращим CAC та funnel conversion.
-Повний LTV/CAC на campaign/adset/ad level неможливий без user-level attribution між marketing data та product/revenue data.
+- `tiktok` має найкращий LTV/CAC — 1.31. Це означає, що канал генерує приблизно $1.31 LTV на кожен $1 acquisition cost.
+- `google` має найвищий LTV per registered user — $16.80, але також найвищий CAC — $14.12.
+- `meta` має найнижчий CAC — $3.10 — і найбільший revenue scale: $41,034.56 або 52.20% усього revenue.
+- Водночас `meta` має LTV/CAC = 0.82, тобто канал нижче break-even.
+- Найнижчий CAC не гарантує найкращу unit economics.
+- Найвищий LTV також не гарантує найкращу unit economics.
+- Monthly CAC був відносно стабільним протягом кампанії, тому різниця між каналами виглядає системною.
+
+## Recommendations
+
+- `tiktok` варто розглядати як основного кандидата для контрольованого масштабування, оскільки він має найкращий баланс між CAC та LTV.
+- `google` варто оптимізувати за CAC, не втрачаючи якість користувачів.
+- `meta` не варто вимикати одразу, оскільки він генерує найбільший revenue scale. Але канал потребує покращення traffic quality або conversion у purchase.
+- Для наступного етапу варто аналізувати `marketing_ads_raw.csv` на рівні `campaign_id`, `adset_id` та `ad_id`, щоб знайти сегменти з кращим CAC та funnel conversion.
+- Повний LTV/CAC на campaign/adset/ad level неможливий без user-level attribution між marketing data та product/revenue data.
+
 ## Limitations
-Дані з product/revenue та marketing datasets не мають прямого user-level join.
-LTV/CAC розраховано на channel level, тому результат є channel-level estimate, а не точним user-level attribution calculation.
-Revenue window обмежений доступним періодом даних, тому 6-month LTV може бути observed LTV, а не повністю matured LTV для всіх користувачів.
-Marketing metrics потребували нормалізації через /100, що було виявлено на етапі cross-dataset consistency checks.
-CAC та LTV розраховані на рівні registered user, щоб забезпечити узгоджену базу порівняння.
+
+- Дані з product/revenue та marketing datasets не мають прямого user-level join.
+- LTV/CAC розраховано на channel level, тому результат є channel-level estimate, а не точним user-level attribution calculation.
+- Revenue window обмежений доступним періодом даних, тому 6-month LTV може бути observed LTV, а не повністю matured LTV для всіх користувачів.
+- Marketing metrics потребували нормалізації через `/100`, що було виявлено на етапі cross-dataset consistency checks.
+- CAC та LTV розраховані на рівні registered user, щоб забезпечити узгоджену базу порівняння.
