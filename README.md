@@ -1,6 +1,7 @@
 # Analytics Project: Unit Economics & Product Metrics
 
 **GitHub Repository:** https://github.com/innamir/Analytics-Project-Unit-Economics-Product-Metrics
+
 **Tableau Dashboard:** https://public.tableau.com/app/profile/inna.myroshnichenko3475/viz/dashboard_17790857686770/UnitEconomicsDashboard?publish=yes
 
 ## Business Context
